@@ -1,0 +1,42 @@
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --border: #2a2a38;
+  --text: #c4c2d0;
+  --muted: #6e6c80;
+  --accent: #00e5c8;
+  --accent-dim: #00a896;
+  --warn: #ff6b4a;
+  --deck-a: #5b8cff;
+  --deck-b: #ff5bc0;
+
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.45;
+  font-weight: 400;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+#root {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  min-height: 100svh;
+  padding: 0 20px 48px;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
