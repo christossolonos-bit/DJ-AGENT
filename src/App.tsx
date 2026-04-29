@@ -12,6 +12,7 @@ import {
   pickDeckLoadFile,
   type SequenceSetRecord,
 } from './sequenceSets'
+import { MusicAssistantPanel } from './assistant/MusicAssistantPanel'
 import { VoiceRecorderPanel } from './VoiceRecorder'
 import './App.css'
 
@@ -52,6 +53,7 @@ function App() {
     A: null,
     B: null,
   })
+  const [deckSeqFile, setDeckSeqFile] = useState<{ A: string | null; B: string | null }>({ A: null, B: null })
   const [savedSets, setSavedSets] = useState<SequenceSetRecord[]>(() => loadSequenceSets())
   const [newSetName, setNewSetName] = useState('')
   const [setLibraryMsg, setSetLibraryMsg] = useState<string | null>(null)
@@ -74,6 +76,7 @@ function App() {
       e.setMasterFilterHz(filterHz)
       setDeckAudio({ A: null, B: null })
       setDeckSeqPreset({ A: null, B: null })
+      setDeckSeqFile({ A: null, B: null })
       setPattern((prev) => {
         e.setSequencerPattern(prev)
         return prev
@@ -184,11 +187,14 @@ function App() {
 
     if (isSequencePresetFile(file)) {
       try {
-        const text = await file.text()
+        const textRaw = await file.text()
+        const text = textRaw.replace(/^\uFEFF/, '').trim()
         const data = JSON.parse(text) as unknown
         const preset = parseSequencePresetJson(data)
         if (!preset) {
-          setError('Invalid sequence JSON — use an exported preset with a "pattern" array (and bpm).')
+          setError(
+            'Could not read this sequence file. Use Export from Saved sequence sets, or JSON with a "pattern" grid (array of rows). A saved library file looks like [{ "name", "bpm", "pattern", … }]; that format is supported too.',
+          )
           return
         }
         if (engine.sequencerRunning) {
@@ -204,11 +210,15 @@ function App() {
           ...prev,
           [deck]: preset.name,
         }))
+        setDeckSeqFile((prev) => ({
+          ...prev,
+          [deck]: file.name,
+        }))
         setSetLibraryMsg(
-          `${deck === 'A' ? 'Deck A' : 'Deck B'} loaded sequence “${preset.name}” (${preset.bpm} BPM). Start sequencer when you want it running.`,
+          `${deck === 'A' ? 'Deck A' : 'Deck B'} loaded ${file.name} (“${preset.name}”, ${preset.bpm} BPM). Scroll down to see the grid; press Start sequencer when ready.`,
         )
       } catch {
-        setError('Could not read that JSON file.')
+        setError('Could not parse that JSON file — check it is valid JSON.')
       }
       return
     }
@@ -306,6 +316,24 @@ function App() {
     })
   }
 
+  const applyAssistantPreset = useCallback(
+    (preset: { name: string; bpm: number; pattern: boolean[][] }) => {
+      const pat = preset.pattern.map((row) => [...row])
+      setPattern(pat)
+      setSeqBpm(preset.bpm)
+      if (engine?.isReady) {
+        if (engine.sequencerRunning) {
+          engine.stopSequencer()
+          setSeqOn(false)
+        }
+        engine.setSequencerPattern(pat)
+        engine.setSequencerBpm(preset.bpm)
+      }
+      setSetLibraryMsg(`Assistant: applied “${preset.name}” (${preset.bpm} BPM).`)
+    },
+    [engine],
+  )
+
   const fmtMixClock = (ms: number) => {
     const s = Math.floor(ms / 1000)
     const m = Math.floor(s / 60)
@@ -392,12 +420,15 @@ function App() {
         {mixDownMsg && <p className="dj-lib-msg">{mixDownMsg}</p>}
       </section>
 
+      <MusicAssistantPanel ready={ready} onApplyPreset={applyAssistantPreset} />
+
       <section className="dj-decks">
         <DeckPanel
           label={DECK_LABEL.A}
           ready={ready}
           audioTrackName={deckAudio.A}
           sequencePresetName={deckSeqPreset.A}
+          sequenceJsonFileName={deckSeqFile.A}
           rate={rateA}
           setRate={setRateA}
           loop={loopA}
@@ -431,6 +462,7 @@ function App() {
           ready={ready}
           audioTrackName={deckAudio.B}
           sequencePresetName={deckSeqPreset.B}
+          sequenceJsonFileName={deckSeqFile.B}
           rate={rateB}
           setRate={setRateB}
           loop={loopB}
@@ -626,6 +658,7 @@ function DeckPanel(props: {
   ready: boolean
   audioTrackName: string | null
   sequencePresetName: string | null
+  sequenceJsonFileName: string | null
   rate: number
   setRate: (v: number) => void
   loop: boolean
@@ -643,6 +676,7 @@ function DeckPanel(props: {
     ready,
     audioTrackName,
     sequencePresetName,
+    sequenceJsonFileName,
     rate,
     setRate,
     loop,
@@ -665,10 +699,19 @@ function DeckPanel(props: {
         <p className="dj-deck-track-line">
           {audioTrackName ? <>Audio: {audioTrackName}</> : <>No audio file on this deck</>}
         </p>
-        {sequencePresetName && (
-          <p className="dj-deck-track-line dj-deck-track-seq">
-            Sequence preset (via JSON): <strong>{sequencePresetName}</strong>
-          </p>
+        {(sequenceJsonFileName || sequencePresetName) && (
+          <div className="dj-deck-seq-loaded">
+            {sequenceJsonFileName && (
+              <p className="dj-deck-track-line dj-deck-track-seq">
+                JSON file: <strong>{sequenceJsonFileName}</strong>
+              </p>
+            )}
+            {sequencePresetName && (
+              <p className="dj-deck-track-line dj-deck-track-seq">
+                Preset name: <strong>{sequencePresetName}</strong>
+              </p>
+            )}
+          </div>
         )}
       </div>
       <div

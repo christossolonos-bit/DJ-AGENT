@@ -28,6 +28,7 @@ export function VoiceRecorderPanel({ ready, engine }: Props) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [assignMsg, setAssignMsg] = useState<string | null>(null)
   const [micError, setMicError] = useState<string | null>(null)
+  const [voiceClipGainDb, setVoiceClipGainDb] = useState(0)
 
   const streamRef = useRef<MediaStream | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
@@ -49,6 +50,11 @@ export function VoiceRecorderPanel({ ready, engine }: Props) {
       streamRef.current = null
     }
   }, [revokePreview])
+
+  useEffect(() => {
+    if (!engine?.isReady) return
+    engine.setVoiceClipGainDb(voiceClipGainDb)
+  }, [engine, voiceClipGainDb])
 
   const stopTimer = () => {
     if (tickRef.current) cancelAnimationFrame(tickRef.current)
@@ -155,7 +161,9 @@ export function VoiceRecorderPanel({ ready, engine }: Props) {
     setMicError(null)
     try {
       await engine.loadPadBlob(slot, lastBlob, `voice-${Date.now()}`)
-      setAssignMsg(`Clip is on pad ${slot + 1}. Press that pad to play it in the mix.`)
+      setAssignMsg(
+        `Clip is on pad ${slot + 1} (voice bus). Press that pad to play it; use Voice clip level above to sit it in the mix.`,
+      )
     } catch (err) {
       setMicError(err instanceof Error ? err.message : 'Could not load clip into sampler.')
     }
@@ -182,7 +190,26 @@ export function VoiceRecorderPanel({ ready, engine }: Props) {
       <h2 className="dj-h2">Voice recorder</h2>
       <p className="dj-hint">
         Capture spoken hooks, shouts, or scratch vocals. Grant microphone access when prompted. Works on HTTPS or localhost.
+        Clips you assign to pads use a separate mix bus from file-loaded samples so you can balance them cleanly.
       </p>
+      <label className="dj-field dj-voice-gain">
+        Voice clip level (in mix)
+        <div className="dj-voice-gain-row">
+          <input
+            type="range"
+            min={-24}
+            max={12}
+            step={1}
+            value={voiceClipGainDb}
+            disabled={!ready}
+            onChange={(e) => setVoiceClipGainDb(Number(e.target.value))}
+          />
+          <span className="dj-voice-gain-val">
+            {voiceClipGainDb > 0 ? '+' : ''}
+            {voiceClipGainDb} dB
+          </span>
+        </div>
+      </label>
       {micError && <p className="dj-error">{micError}</p>}
       <div className="dj-voice-row">
         {phase === 'recording' ? (

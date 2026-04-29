@@ -75,19 +75,54 @@ export function deleteSequenceSet(id: string): void {
   saveSequenceSets(loadSequenceSets().filter((s) => s.id !== id))
 }
 
+/** Normalize JSON root: plain preset object, or `[preset]`, or `{ presets: [preset] }`. */
+function unwrapSequenceDoc(obj: unknown): Record<string, unknown> | null {
+  if (obj === null || typeof obj !== 'object') return null
+
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) return null
+    const first = obj[0]
+    if (first !== null && typeof first === 'object' && !Array.isArray(first)) {
+      return first as Record<string, unknown>
+    }
+    return null
+  }
+
+  const o = obj as Record<string, unknown>
+  const nested = o.presets
+  if (Array.isArray(nested) && nested.length > 0) {
+    const first = nested[0]
+    if (first !== null && typeof first === 'object' && !Array.isArray(first)) {
+      return first as Record<string, unknown>
+    }
+  }
+
+  return o
+}
+
 /**
- * Parse exported sequence JSON ({ version?, name, bpm, pattern }) or library-shaped objects that include pattern[].
- * Returns null if `pattern` is missing or not an array (wrong file type).
+ * Parse exported sequence JSON ({ version?, name, bpm, pattern }), localStorage-style `[{ ... }]`,
+ * or alternate keys patterns / steps / grid for the step grid.
  */
 export function parseSequencePresetJson(obj: unknown): { name: string; bpm: number; pattern: boolean[][] } | null {
-  if (!obj || typeof obj !== 'object') return null
-  const o = obj as Record<string, unknown>
-  if (!Array.isArray(o.pattern)) return null
-  const nameRaw = typeof o.name === 'string' ? o.name.trim() : ''
+  const root = unwrapSequenceDoc(obj)
+  if (!root) return null
+
+  const rawPattern = root.pattern ?? root.patterns ?? root.steps ?? root.grid
+  if (!Array.isArray(rawPattern)) return null
+
+  const nameRaw = typeof root.name === 'string' ? root.name.trim() : ''
   const name = nameRaw.length > 0 ? nameRaw : 'Preset'
-  const bpmRaw = typeof o.bpm === 'number' && Number.isFinite(o.bpm) ? o.bpm : 120
-  const bpm = Math.round(Math.min(180, Math.max(60, bpmRaw)))
-  const pattern = normalizePattern(o.pattern)
+
+  const tempo =
+    typeof root.bpm === 'number' && Number.isFinite(root.bpm)
+      ? root.bpm
+      : typeof root.tempo === 'number' && Number.isFinite(root.tempo)
+        ? root.tempo
+        : 120
+  const bpm = Math.round(Math.min(180, Math.max(60, tempo)))
+
+  const pattern = normalizePattern(rawPattern)
   return { name, bpm, pattern }
 }
 

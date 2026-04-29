@@ -151,6 +151,12 @@
   font-weight: 600;
 }
 
+.dj-deck-seq-loaded {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
 .dj-deck-drop {
   border: 2px dashed var(--border);
   border-radius: 10px;
@@ -471,6 +477,30 @@
   display: none;
 }
 
+.dj-voice-gain {
+  margin-top: 12px;
+  max-width: 420px;
+}
+
+.dj-voice-gain-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dj-voice-gain-row input[type='range'] {
+  flex: 1;
+  min-width: 0;
+}
+
+.dj-voice-gain-val {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: var(--accent);
+  min-width: 52px;
+  text-align: right;
+}
+
 .dj-voice-row {
   display: flex;
   flex-wrap: wrap;
@@ -651,4 +681,103 @@
 
 .dj-step:hover:not(:disabled) {
   border-color: var(--muted);
+}
+
+.dj-assistant {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 20px;
+}
+
+.dj-assistant a {
+  color: var(--accent);
+}
+
+.dj-assistant-settings {
+  margin-bottom: 14px;
+}
+
+.dj-assistant-toggle {
+  margin-bottom: 8px;
+}
+
+.dj-assistant-key input {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #0e0e14;
+  color: var(--text);
+  width: 100%;
+  max-width: 420px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+.dj-assistant-key code {
+  font-size: 0.78rem;
+}
+
+.dj-assistant-chat {
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  margin-bottom: 12px;
+}
+
+.dj-assistant-msg {
+  margin-bottom: 12px;
+}
+
+.dj-assistant-msg:last-child {
+  margin-bottom: 0;
+}
+
+.dj-assistant-role {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.dj-assistant-msg-user .dj-assistant-role {
+  color: var(--deck-a);
+}
+
+.dj-assistant-msg-assistant .dj-assistant-role {
+  color: var(--accent-dim);
+}
+
+.dj-assistant-text {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.dj-assistant-compose {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.dj-assistant-input {
+  flex: 1 1 260px;
+  min-height: 72px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #0e0e14;
+  color: var(--text);
+  resize: vertical;
+}
+
+.dj-assistant-compose .dj-btn {
+  flex-shrink: 0;
 }

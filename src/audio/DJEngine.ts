@@ -50,6 +50,8 @@ export class DJEngine {
   private keysBus: Tone.Volume
   private bassBus: Tone.Volume
   private padBus: Tone.Volume
+  /** Mic / recorder clips only (file drops on pads use {@link padBus}). */
+  private voiceClipBus: Tone.Volume
 
   private kick: Tone.MembraneSynth
   private snare: Tone.NoiseSynth
@@ -96,6 +98,7 @@ export class DJEngine {
     this.keysBus = new Tone.Volume(-8).connect(this.masterBus)
     this.bassBus = new Tone.Volume(-6).connect(this.masterBus)
     this.padBus = new Tone.Volume(-3).connect(this.masterBus)
+    this.voiceClipBus = new Tone.Volume(0).connect(this.masterBus)
 
     this.kick = new Tone.MembraneSynth({
       pitchDecay: 0.02,
@@ -332,21 +335,31 @@ export class DJEngine {
     this.bass.triggerAttackRelease(note, '8n', time ?? Tone.now())
   }
 
-  setInstrumentBus(which: 'drums' | 'keys' | 'bass' | 'pads', db: number): void {
-    const bus = { drums: this.drumBus, keys: this.keysBus, bass: this.bassBus, pads: this.padBus }[which]
+  setInstrumentBus(which: 'drums' | 'keys' | 'bass' | 'pads' | 'voice', db: number): void {
+    const bus = { drums: this.drumBus, keys: this.keysBus, bass: this.bassBus, pads: this.padBus, voice: this.voiceClipBus }[
+      which
+    ]
     bus.volume.rampTo(db, 0.05)
   }
 
-  /** Load recorded or pasted audio bytes into a sampler pad (same path as file upload). */
+  setVoiceClipGainDb(db: number): void {
+    this.voiceClipBus.volume.rampTo(db, 0.05)
+  }
+
+  /** Load recorded mic clips onto a pad; routed through the voice clip bus (see {@link setVoiceClipGainDb}). */
   async loadPadBlob(slot: number, blob: Blob, filename = 'voice-clip'): Promise<void> {
     const ext =
       blob.type.includes('webm') ? 'webm' : blob.type.includes('mp4') ? 'm4a' : blob.type.includes('ogg') ? 'ogg' : 'wav'
     const type = blob.type || 'audio/webm'
     const file = new File([blob], `${filename}.${ext}`, { type })
-    await this.loadPadSample(slot, file)
+    await this.replacePadPlayer(slot, file, this.voiceClipBus)
   }
 
   async loadPadSample(slot: number, file: File): Promise<void> {
+    await this.replacePadPlayer(slot, file, this.padBus)
+  }
+
+  private async replacePadPlayer(slot: number, file: File, bus: Tone.Volume): Promise<void> {
     const existing = this.padPlayers.get(slot)
     if (existing) {
       existing.dispose()
@@ -358,7 +371,7 @@ export class DJEngine {
     this.padBlobUrls.set(slot, url)
     const player = new Tone.Player({ url, loop: false, autostart: false })
     await player.load(url)
-    player.connect(this.padBus)
+    player.connect(bus)
     this.padPlayers.set(slot, player)
   }
 
@@ -546,6 +559,7 @@ export class DJEngine {
     this.keysBus.dispose()
     this.bassBus.dispose()
     this.padBus.dispose()
+    this.voiceClipBus.dispose()
     this.masterFilter.dispose()
     this.masterVol.dispose()
     this.masterBus.dispose()
